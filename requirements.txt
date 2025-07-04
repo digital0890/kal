@@ -6,5 +6,5 @@ pykalman
 yfinance
 plotly
 scipy
-pywt
+PyWavelets
 scikit-learn 
