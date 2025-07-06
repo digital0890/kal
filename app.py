@@ -1635,8 +1635,10 @@ def main():
         """, unsafe_allow_html=True)
         
         # ایجاد دکمه‌های بازه زمانی
-        intervals = ['5m', '15m', '30m', '1h', '4h']
+        intervals = ['1m', '3m', '5m', '15m', '30m', '1h', '4h']
         
+        btn1m = st.button("1m", key="btn_1m", use_container_width=True)
+        btn3m = st.button("3m", key="btn_3m", use_container_width=True)
         btn5m = st.button("5m", key="btn_5m", use_container_width=True)
         btn15m = st.button("15m", key="btn_15m", use_container_width=True)
         btn30m = st.button("30m", key="btn_30m", use_container_width=True)
@@ -1646,6 +1648,10 @@ def main():
         st.markdown("</div></div>", unsafe_allow_html=True)
         
         # بروزرسانی انتخاب اینتروال
+        if btn1m:
+            st.session_state.selected_interval = "1m"
+        if btn3m:
+            st.session_state.selected_interval = "3m"
         if btn5m:
             st.session_state.selected_interval = "5m"
         if btn15m:
@@ -1659,6 +1665,8 @@ def main():
         
         # نمایش وضعیت فعلی دکمه‌ها
         interval_classes = {
+            "1m": "active" if st.session_state.selected_interval == "1m" else "inactive",
+            "3m": "active" if st.session_state.selected_interval == "3m" else "inactive",
             "5m": "active" if st.session_state.selected_interval == "5m" else "inactive",
             "15m": "active" if st.session_state.selected_interval == "15m" else "inactive",
             "30m": "active" if st.session_state.selected_interval == "30m" else "inactive",
@@ -1668,6 +1676,8 @@ def main():
         
         st.markdown(f"""
         <script>
+            document.querySelector('[data-testid="baseButton-btn_1m"]').className = 'interval-btn {interval_classes["1m"]}';
+            document.querySelector('[data-testid="baseButton-btn_3m"]').className = 'interval-btn {interval_classes["3m"]}';
             document.querySelector('[data-testid="baseButton-btn_5m"]').className = 'interval-btn {interval_classes["5m"]}';
             document.querySelector('[data-testid="baseButton-btn_15m"]').className = 'interval-btn {interval_classes["15m"]}';
             document.querySelector('[data-testid="baseButton-btn_30m"]').className = 'interval-btn {interval_classes["30m"]}';
