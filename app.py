@@ -881,10 +881,39 @@ def compute_extrema_and_averages(residuals, method_type):
         'filtered_valleys': filtered_valleys
     }
 
+# تابع تشخیص روند بر اساس تایم فریم
+def determine_trend(interval, avg_slope, current_price):
+    # تنظیم آستانه‌ها بر اساس تایم فریم و قیمت فعلی
+    base_price = 2000.0  # قیمت پایه برای طلا
+    scale_factor = current_price / base_price
+    
+    # تعریف آستانه‌ها برای تایم فریم‌های مختلف
+    threshold_map = {
+        '1m': 0.1 * scale_factor,
+        '5m': 0.3 * scale_factor,
+        '15m': 0.5 * scale_factor,
+        '30m': 1.0 * scale_factor,
+        '1h': 2.0 * scale_factor,
+        '4h': 5.0 * scale_factor
+    }
+    
+    threshold = threshold_map.get(interval, 1.0 * scale_factor)
+    
+    # تشخیص روند بر اساس شیب
+    if avg_slope > threshold:
+        return "صعودی 📈", "#10b981"  # سبز
+    elif avg_slope < -threshold:
+        return "نزولی 📉", "#ef4444"  # قرمز
+    else:
+        return "خنثی ↔️", "#94a3b8"  # خاکستری
+
 # تابع اصلی تحلیل
 def run_analysis(symbol, start_date, start_hour, start_minute, end_date, end_hour, end_minute, interval, 
                  initial_state_mean, auto_initial_state, show_residual,
                  methods, uploaded_file=None):
+    
+    # تعریف اینتروال برای تشخیص روند
+    interval_for_trend = interval
     
     if uploaded_file is not None:
         try:
@@ -1009,10 +1038,28 @@ def run_analysis(symbol, start_date, start_hour, start_minute, end_date, end_hou
                 data[filtered_col] = filtered_close
                 data[residual_col] = data[close_col] - data[filtered_col]
                 method_name = 'Kalman'
+                
+                # محاسبه شیب روند
+                slopes = np.diff(data[filtered_col])
+                if len(slopes) > 0:
+                    if len(slopes) >= 5:
+                        avg_slope = np.mean(slopes[-5:])
+                    else:
+                        avg_slope = np.mean(slopes)
+                else:
+                    avg_slope = 0
+                    
+                # تشخیص روند
+                current_price = data[close_col].iloc[-1]
+                trend_direction, trend_color = determine_trend(interval_for_trend, avg_slope, current_price)
+                
                 results_by_method[method] = {
                     'method_name': method_name,
                     'filtered_col': filtered_col,
                     'residual_col': residual_col,
+                    'trend_direction': trend_direction,
+                    'trend_color': trend_color,
+                    'avg_slope': avg_slope
                 }
             except Exception as e:
                 st.error(f"Error applying Kalman filter: {e}")
@@ -1026,10 +1073,28 @@ def run_analysis(symbol, start_date, start_hour, start_minute, end_date, end_hou
                 data[filtered_col] = trend
                 data[residual_col] = data[close_col] - data[filtered_col]
                 method_name = f'Wavelet ({best_wavelet}, level: {level})'
+                
+                # محاسبه شیب روند
+                slopes = np.diff(data[filtered_col])
+                if len(slopes) > 0:
+                    if len(slopes) >= 5:
+                        avg_slope = np.mean(slopes[-5:])
+                    else:
+                        avg_slope = np.mean(slopes)
+                else:
+                    avg_slope = 0
+                    
+                # تشخیص روند
+                current_price = data[close_col].iloc[-1]
+                trend_direction, trend_color = determine_trend(interval_for_trend, avg_slope, current_price)
+                
                 results_by_method[method] = {
                     'method_name': method_name,
                     'filtered_col': filtered_col,
                     'residual_col': residual_col,
+                    'trend_direction': trend_direction,
+                    'trend_color': trend_color,
+                    'avg_slope': avg_slope
                 }
             except Exception as e:
                 st.error(f"Error in wavelet analysis: {e}")
@@ -1039,6 +1104,17 @@ def run_analysis(symbol, start_date, start_hour, start_minute, end_date, end_hou
     for method in methods:
         method_data = results_by_method[method]
         method_name = method_data['method_name']
+        
+        # نمایش وضعیت روند
+        st.markdown(f"### تحلیل روند ({method_name})")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown(f"**تایم فریم:** `{interval_for_trend}`")
+        with col2:
+            st.markdown(f"**وضعیت فعلی:** <span style='color:{method_data['trend_color']};font-weight:bold;'>{method_data['trend_direction']}</span>", 
+                        unsafe_allow_html=True)
+        st.markdown(f"**میانگین شیب:** `{method_data['avg_slope']:.6f}`")
+        st.markdown("---")
         
         if show_residual:
             residuals = data[method_data['residual_col']].values
@@ -1517,10 +1593,7 @@ def main():
         """, unsafe_allow_html=True)
         
         symbols = [
-            'GC=F', 'SI=F', 'EURUSD=X', 'GBPUSD=X', 'JPY=X', '^DJI',
-            'BTC-USD', 'ETH-USD', 'XRP-USD', 'ADA-USD', 'LTC-USD', 'DOGE-USD',
-            'BNB-USD', 'SOL-USD', 'DOT-USD', 'AVAX-USD', 'MATIC-USD', 'LINK-USD',
-            'PEPE24478-USD'  # Added PEPE cryptocurrency
+            'GC=F', 'SI=F', '============','PEPE24478-USD', 'ETH-USD', 'XRP-USD', 'SOL-USD'  # Added PEPE cryptocurrency
         ]
         symbol = st.selectbox('Select Symbol', symbols, index=0, label_visibility="collapsed")
         
